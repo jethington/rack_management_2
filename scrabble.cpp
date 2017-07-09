@@ -7,13 +7,17 @@
 #include <tuple>
 #include <vector>
 #include <algorithm>
+#include <fstream>
+#include <unordered_set>
 
 int value(std::string word);
-std::tuple<std::string, int> highest_value(std::string tiles); // TODO: std::vector<char> more accurate... does that make a difference?
+std::tuple<std::string, int> highest_value(std::string tiles);
 std::vector<std::string> generate_permutations(std::string tiles);
 void generate_permutations_helper(std::string tiles_left, std::string permutation, std::vector<std::string>& results);
 
 const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
+
+std::unordered_set<std::string> words_set;
 
 int char_to_index(char c) {
     // assuming characters will be lower-case a..z    
@@ -34,6 +38,7 @@ int value(std::string word) {
     return total_value;
 }
 
+// TODO: rename these functions
 std::vector<std::string> generate_permutations(std::string tiles) {
     std::vector<std::string> results;
     generate_permutations_helper(tiles, "", results);
@@ -49,8 +54,13 @@ void generate_permutations_helper(std::string tiles_left, std::string permutatio
         std::swap(tiles_left_copy[i], tiles_left_copy.back());
         tiles_left_copy.pop_back();
         permutation_copy.push_back(c);
-        if (tiles_left_copy.length() == 0) {
-            results.push_back(permutation_copy);
+
+        if (words_set.count(permutation_copy) != 0) {
+            results.push_back(permutation_copy); // this permutation is in the list of english words, so add it to the results vector
+        }
+
+        if (tiles_left_copy.length() == 0) {            
+            // done, just return
         }
         else {
             generate_permutations_helper(tiles_left_copy, permutation_copy, results);
@@ -84,20 +94,48 @@ void run_tests(void) {
     assert(value("daily") == 31);
     
     // test 'generate_permutations'
-    std::vector<std::string> permutations = generate_permutations("abc");
-    //generate_permutations_helper("abc", "", permutations);
+    // TODO: need to modify testing strategy, this currently fails due to word list
+    /*std::vector<std::string> permutations = generate_permutations("abc");
     assert(permutations.size() == 6);
     assert(permutations[0] == "acb");
     assert(permutations[1] == "abc");
     assert(permutations[2] == "bac");
     assert(permutations[3] == "bca");
     assert(permutations[4] == "cab");
-    assert(permutations[5] == "cba");
+    assert(permutations[5] == "cba");*/
 
+    // test 'highest_value'
+    // Note: this is pretty slow, about 6-10 seconds with -O2
+    assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
+    assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
+    assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
 }
 
 int main(void) {
-    run_tests();    
+    // read word list into a hash set
+        
+    std::ifstream in_file("enable1.txt"); 
+    std::string word;
+    while (in_file >> word) {
+        words_set.insert(word);
+    }
+
+    //run_tests();
+
+    std::string s;
+    int i;
+    std::tie(s, i) = highest_value("umnyeoumcp");
+    std::cout << s << " " << i << std::endl;
+    std::tie(s, i) = highest_value("orhvtudmcz");
+    std::cout << s << " " << i << std::endl;
+    std::tie(s, i) = highest_value("fyilnprtia");
+    std::cout << s << " " << i << std::endl;
+
+    // prints:
+
+    // eponym 52
+    // vouch 41
+    // nitrify 67
 
     return 0;
 }
