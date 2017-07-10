@@ -11,6 +11,7 @@
 #include <unordered_set>
 
 int value(std::string word);
+int char_to_index(char c);
 std::tuple<std::string, int> highest_value(std::string tiles);
 std::vector<std::string> generate_permutations(std::string tiles);
 void generate_permutations_helper(std::string tiles_left, std::string permutation, std::vector<std::string>& results);
@@ -18,6 +19,79 @@ void generate_permutations_helper(std::string tiles_left, std::string permutatio
 const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
 
 std::unordered_set<std::string> words_set;
+
+struct Node {
+	Node* next[26];
+	bool done;
+
+	Node() {
+		done = false;
+		for (int i = 0; i < 26; i++) {
+			next[i] = nullptr;
+		}
+	}
+	~Node() {
+		// note: not bothering with cleanup because Nodes are never deleted during the life of the program
+		//for (int i = 0; i < 26; i++) {
+		//	delete next[i];
+		//}
+	}
+	void add_string(std::string to_add);
+	void words(std::string tiles, std::string so_far, std::vector<std::string>& results);
+
+	// TODO: optimizations, add later?
+	//int score_so_far;
+	//int highest_score_this_branch;
+};
+
+//std::tuple(std::string, int) Node::best_score(std::string tiles_used, std::string tiles_left) {
+//
+//}
+
+// note: single head node does not represent a letter/tile
+//       so the word 'a' will have 2 nodes
+void Node::add_string(std::string to_add) {
+	if (to_add.length() == 0) {
+		done = true;
+		return;
+	}
+	else {
+		char c = to_add[0];
+		to_add.erase(0, 1);
+		int index = char_to_index(c);
+		if (next[index] == nullptr) {
+			next[index] = new Node();
+		}
+		next[index]->add_string(to_add);
+	}
+}
+
+void Node::words(std::string tiles, std::string so_far, std::vector<std::string>& results) {
+	
+	//std::cout << "so_far: " << so_far << std::endl;
+	//std::cout << "tiles: " << tiles << std::endl;
+
+	if (done) {
+		results.push_back(so_far);
+	}
+
+	if (tiles.length() == 0) {
+		return; // this branch is done
+	}
+	else {
+		for (int i = 0; i < tiles.length(); i++) {
+			char c = tiles[i];
+			int index = char_to_index(c);
+			if (next[index] != nullptr) {
+				std::string tiles_copy = tiles;
+				std::string so_far_copy = so_far;
+				tiles_copy.erase(i, 1);
+				so_far_copy.push_back(c);
+				next[index]->words(tiles_copy, so_far_copy, results);
+			}
+		}
+	}
+}
 
 int char_to_index(char c) {
     // assuming characters will be lower-case a..z    
@@ -106,9 +180,33 @@ void run_tests(void) {
 
     // test 'highest_value'
     // Note: this is pretty slow, about 6-10 seconds with -O2
-    assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
-    assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
-    assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
+    //assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
+    //assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
+    //assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
+
+	Node tree;
+	tree.add_string("foo");
+	tree.add_string("bar");
+	tree.add_string("baz");
+
+	assert(tree.next[0] == nullptr); // a
+	assert(tree.next[1] != nullptr); // b
+	assert(tree.next[2] == nullptr); // c
+	assert(tree.next[5] != nullptr); // f
+
+	Node* f = tree.next[5];
+	assert(f->next[14] != nullptr); // f - o
+	Node* b = tree.next[1];
+	assert(b->next[0] != nullptr); // b - a
+
+	std::vector<std::string> results;
+	tree.words("barwxyz", "", results); // note: barxyz should find bar and baz, only finds bar...
+	//std::cout << results.size() << std::endl;
+	assert(results.size() == 2);
+	assert(results[0] == "bar");
+	assert(results[1] == "baz");
+	//std::cout << results[0] << std::endl;
+	//assert(results[0] == "bar");
 }
 
 int main(void) {
@@ -120,16 +218,16 @@ int main(void) {
         words_set.insert(word);
     }
 
-    //run_tests();
+    run_tests();
 
-    std::string s;
+    /*std::string s;
     int i;
     std::tie(s, i) = highest_value("umnyeoumcp");
     std::cout << s << " " << i << std::endl;
     std::tie(s, i) = highest_value("orhvtudmcz");
     std::cout << s << " " << i << std::endl;
     std::tie(s, i) = highest_value("fyilnprtia");
-    std::cout << s << " " << i << std::endl;
+    std::cout << s << " " << i << std::endl;*/
 
     // prints:
 
