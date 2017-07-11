@@ -12,13 +12,10 @@
 
 int value(std::string word);
 int char_to_index(char c);
+std::tuple<std::string, int> highest_value_brute_force(std::string tiles);
 std::tuple<std::string, int> highest_value(std::string tiles);
 std::vector<std::string> generate_permutations(std::string tiles);
 void generate_permutations_helper(std::string tiles_left, std::string permutation, std::vector<std::string>& results);
-
-const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
-
-std::unordered_set<std::string> words_set;
 
 struct Node {
 	Node* next[26];
@@ -43,6 +40,11 @@ struct Node {
 	//int score_so_far;
 	//int highest_score_this_branch;
 };
+
+const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
+
+std::unordered_set<std::string> words_set;
+Node tree;
 
 //std::tuple(std::string, int) Node::best_score(std::string tiles_used, std::string tiles_left) {
 //
@@ -142,7 +144,7 @@ void generate_permutations_helper(std::string tiles_left, std::string permutatio
     }
 }
 
-std::tuple<std::string, int> highest_value(std::string tiles) {
+std::tuple<std::string, int> highest_value_brute_force(std::string tiles) {
     // brute force approach
 
     std::vector<std::string> permutations = generate_permutations(tiles);
@@ -150,6 +152,23 @@ std::tuple<std::string, int> highest_value(std::string tiles) {
     int highest = 0;
     std::string best;
     for (const std::string& s: permutations) {
+        if (value(s) > highest) {
+            best = s;
+            highest = value(s);
+        }
+    }
+
+    return std::make_tuple(best, highest);
+}
+
+std::tuple<std::string, int> highest_value(std::string tiles) {
+    // use tree instead
+    std::vector<std::string> results;
+    tree.words(tiles, "", results);
+    
+    int highest = 0;
+    std::string best;
+    for (const std::string& s: results) {
         if (value(s) > highest) {
             best = s;
             highest = value(s);
@@ -178,56 +197,62 @@ void run_tests(void) {
     assert(permutations[4] == "cab");
     assert(permutations[5] == "cba");*/
 
-    // test 'highest_value'
+    // test 'highest_value_brute_force'
     // Note: this is pretty slow, about 6-10 seconds with -O2
-    //assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
-    //assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
-    //assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
+    //assert(highest_value_brute_force("iogsvooely") == std::make_tuple("oology", 44));
+    //assert(highest_value_brute_force("seevurtfci") == std::make_tuple("service", 52));
+    //assert(highest_value_brute_force("vepredequi") == std::make_tuple("reequip", 78));
 
-	Node tree;
-	tree.add_string("foo");
-	tree.add_string("bar");
-	tree.add_string("baz");
+    // test 'Node::add_string'
+    Node t;
+    t.add_string("foo");
+    t.add_string("bar");
+    t.add_string("baz");
 
-	assert(tree.next[0] == nullptr); // a
-	assert(tree.next[1] != nullptr); // b
-	assert(tree.next[2] == nullptr); // c
-	assert(tree.next[5] != nullptr); // f
+    assert(t.next[0] == nullptr); // a
+    assert(t.next[1] != nullptr); // b
+    assert(t.next[2] == nullptr); // c
+    assert(t.next[5] != nullptr); // f
 
-	Node* f = tree.next[5];
-	assert(f->next[14] != nullptr); // f - o
-	Node* b = tree.next[1];
-	assert(b->next[0] != nullptr); // b - a
+    Node* f = t.next[5];
+    assert(f->next[14] != nullptr); // f - o
+    Node* b = t.next[1];
+    assert(b->next[0] != nullptr); // b - a
 
-	std::vector<std::string> results;
-	tree.words("barwxyz", "", results); // note: barxyz should find bar and baz, only finds bar...
-	//std::cout << results.size() << std::endl;
-	assert(results.size() == 2);
-	assert(results[0] == "bar");
-	assert(results[1] == "baz");
-	//std::cout << results[0] << std::endl;
-	//assert(results[0] == "bar");
+    // test 'Node::words'
+    std::vector<std::string> results;
+    t.words("barwxyz", "", results);
+    assert(results.size() == 2);
+    assert(results[0] == "bar");
+    assert(results[1] == "baz");
+	
+    // test 'highest_value'
+    assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
+    assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
+    assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
 }
 
 int main(void) {
-    // read word list into a hash set
-        
+
+   
+    // read word list into a tree   
     std::ifstream in_file("enable1.txt"); 
     std::string word;
     while (in_file >> word) {
         words_set.insert(word);
+        tree.add_string(word);
     }
 
     run_tests();
 
-    /*std::string s;
+    std::string s;
     int i;
     std::tie(s, i) = highest_value("umnyeoumcp");
     std::cout << s << " " << i << std::endl;
     std::tie(s, i) = highest_value("orhvtudmcz");
     std::cout << s << " " << i << std::endl;
     std::tie(s, i) = highest_value("fyilnprtia");
-    std::cout << s << " " << i << std::endl;*/
+    std::cout << s << " " << i << std::endl;
 
     // prints:
 
