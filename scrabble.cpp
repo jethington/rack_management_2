@@ -29,12 +29,8 @@ struct Node {
 		//	delete next[i];
 		//}
 	}
-	void add_string(std::string to_add);
+	void add_string(std::string& to_add, int letter_index);
 	void words(std::string tiles, std::string so_far, std::vector<std::string>& results);
-
-	// TODO: optimizations, add later?
-	//int score_so_far;
-	//int highest_score_this_branch;
 };
 
 const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
@@ -47,19 +43,19 @@ Node tree;
 
 // note: single head node does not represent a letter/tile
 //       so the word 'a' will have 2 nodes
-void Node::add_string(std::string to_add) {
-	if (to_add.length() == 0) {
+void Node::add_string(std::string& to_add, int letter_index) {
+	if (to_add.length() == letter_index) {
 		done = true;
 		return;
 	}
 	else {
-		char c = to_add[0];
-		to_add.erase(0, 1);
-		int index = char_to_index(c);
-		if (next[index] == nullptr) {
-			next[index] = new Node();
+		char c = to_add[letter_index];
+		letter_index++;
+		int next_node_index = char_to_index(c);
+		if (next[next_node_index] == nullptr) {
+			next[next_node_index] = new Node();
 		}
-		next[index]->add_string(to_add);
+		next[next_node_index]->add_string(to_add, letter_index);
 	}
 }
 
@@ -136,9 +132,9 @@ void run_tests(void) {
 
     // test 'Node::add_string'
     Node t;
-    t.add_string("foo");
-    t.add_string("bar");
-    t.add_string("baz");
+    t.add_string(std::string("foo"), 0);
+    t.add_string(std::string("bar"), 0);
+    t.add_string(std::string("baz"), 0);
 
     assert(t.next[0] == nullptr); // a
     assert(t.next[1] != nullptr); // b
@@ -169,7 +165,7 @@ int main(void) {
     std::ifstream in_file("enable1.txt"); 
     std::string word;
     while (in_file >> word) {
-        tree.add_string(word);
+        tree.add_string(word, 0);
     }
 
     run_tests();
