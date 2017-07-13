@@ -12,6 +12,7 @@
 int value(std::string word);
 int char_to_index(char c);
 std::tuple<std::string, int> highest_value(std::string tiles);
+std::tuple<std::string, int> highest_value_2(std::string tiles);
 
 struct Node {
 	Node* next[26];
@@ -30,6 +31,7 @@ struct Node {
 	}
 	void add_string(std::string& to_add, int letter_index);
 	void words(std::string tiles, std::string so_far, std::vector<std::string>& results);
+	std::tuple<std::string, int> highest_value_helper(std::string tiles, std::string so_far);
 };
 
 const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
@@ -104,20 +106,61 @@ int value(std::string word) {
 }
 
 std::tuple<std::string, int> highest_value(std::string tiles) {
-    // use tree instead
-    std::vector<std::string> results;
-    tree.words(tiles, "", results);
-    
-    int highest = 0;
-    std::string best;
-    for (const std::string& s: results) {
-        if (value(s) > highest) {
-            best = s;
-            highest = value(s);
-        }
-    }
+	std::vector<std::string> results;
+	tree.words(tiles, "", results);
 
-    return std::make_tuple(best, highest);
+	int highest = 0;
+	std::string best;
+	for (const std::string& s : results) {
+		if (value(s) > highest) {
+			best = s;
+			highest = value(s);
+		}
+	}
+
+	return std::make_tuple(best, highest);
+}
+
+std::tuple<std::string, int> highest_value_2(std::string tiles) {
+	return tree.highest_value_helper(tiles, "");
+}
+
+std::tuple<std::string, int> Node::highest_value_helper(std::string tiles, std::string so_far) {
+	int highest = 0;
+	std::string best;
+
+	if (done) {
+		best = so_far;
+		highest = score_so_far;
+	}
+
+	if (tiles.length() == 0) {
+		// do nothing, this branch is done
+	}
+	else {
+		for (int i = 0; i < tiles.length(); i++) {
+			char c = tiles[i];
+			int index = char_to_index(c);
+			if (next[index] != nullptr) {
+				std::string tiles_copy;
+				tiles_copy.append(tiles, 0, i);
+				tiles_copy.append(tiles, i, tiles.length());
+				std::string so_far_copy = so_far;
+				tiles_copy.erase(i, 1);
+				so_far_copy.push_back(c);
+				
+				std::string s;
+				int score;
+				std::tie(s, score) = next[index]->highest_value_helper(tiles_copy, so_far_copy);
+				if (score > highest) {
+					highest = score;
+					best = s;
+				}
+			}
+		}
+	}
+
+	return std::make_tuple(best, highest);
 }
 
 void run_tests(void) {
@@ -165,6 +208,11 @@ void run_tests(void) {
     assert(highest_value("iogsvooely") == std::make_tuple("oology", 44));
     assert(highest_value("seevurtfci") == std::make_tuple("service", 52));
     assert(highest_value("vepredequi") == std::make_tuple("reequip", 78));
+
+	// test 'highest_value_2'
+	assert(highest_value_2("iogsvooely") == std::make_tuple("oology", 44));
+	assert(highest_value_2("seevurtfci") == std::make_tuple("service", 52));
+	assert(highest_value_2("vepredequi") == std::make_tuple("reequip", 78));
 }
 
 int main(void) {
