@@ -16,18 +16,17 @@ std::tuple<std::string, int> highest_value(std::string tiles);
 struct Node {
 	Node* next[26];
 	bool done;
+	int score_so_far;
 
-	Node() {
-		done = false;
+	Node(int score_so_far) : score_so_far(score_so_far), done(false) {
 		for (int i = 0; i < 26; i++) {
 			next[i] = nullptr;
 		}
 	}
+	Node() : Node(0) {
+	}
 	~Node() {
 		// note: not bothering with cleanup because Nodes are never deleted during the life of the program
-		//for (int i = 0; i < 26; i++) {
-		//	delete next[i];
-		//}
 	}
 	void add_string(std::string& to_add, int letter_index);
 	void words(std::string tiles, std::string so_far, std::vector<std::string>& results);
@@ -53,17 +52,14 @@ void Node::add_string(std::string& to_add, int letter_index) {
 		letter_index++;
 		int next_node_index = char_to_index(c);
 		if (next[next_node_index] == nullptr) {
-			next[next_node_index] = new Node();
+			int new_score = score_so_far + tile_values[next_node_index] * letter_index; // TODO: these names are kind of confusing
+			next[next_node_index] = new Node(new_score);
 		}
 		next[next_node_index]->add_string(to_add, letter_index);
 	}
 }
 
 void Node::words(std::string tiles, std::string so_far, std::vector<std::string>& results) {
-	
-	//std::cout << "so_far: " << so_far << std::endl;
-	//std::cout << "tiles: " << tiles << std::endl;
-
 	if (done) {
 		results.push_back(so_far);
 	}
@@ -76,7 +72,9 @@ void Node::words(std::string tiles, std::string so_far, std::vector<std::string>
 			char c = tiles[i];
 			int index = char_to_index(c);
 			if (next[index] != nullptr) {
-				std::string tiles_copy = tiles;
+				std::string tiles_copy;
+				tiles_copy.append(tiles, 0, i);
+				tiles_copy.append(tiles, i, tiles.length());
 				std::string so_far_copy = so_far;
 				tiles_copy.erase(i, 1);
 				so_far_copy.push_back(c);
@@ -141,10 +139,20 @@ void run_tests(void) {
     assert(t.next[2] == nullptr); // c
     assert(t.next[5] != nullptr); // f
 
+	assert(t.score_so_far == 0); // head Node should have a score of 0, no letters so far
+
     Node* f = t.next[5];
     assert(f->next[14] != nullptr); // f - o
-    Node* b = t.next[1];
+	assert(f->score_so_far == tile_values[5]);
+
+	Node* b = t.next[1];
     assert(b->next[0] != nullptr); // b - a
+	assert(b->score_so_far == 3); // b
+
+	Node* a = b->next[0];
+	assert(a->score_so_far == (3*1 + 1*2)); // ba
+	Node* r = a->next[17];
+	assert(r->score_so_far == (3*1 + 1*2 + 1*3)); // bar
 
     // test 'Node::words'
     std::vector<std::string> results;
