@@ -18,8 +18,9 @@ struct Node {
 	Node* next[26];
 	bool done;
 	int score_so_far;
+	int highest_this_branch;
 
-	Node(int score_so_far) : score_so_far(score_so_far), done(false) {
+	Node(int score_so_far) : score_so_far(score_so_far), done(false), highest_this_branch(0) {
 		for (int i = 0; i < 26; i++) {
 			next[i] = nullptr;
 		}
@@ -29,9 +30,9 @@ struct Node {
 	~Node() {
 		// note: not bothering with cleanup because Nodes are never deleted during the life of the program
 	}
-	void add_string(std::string& to_add, int letter_index);
+	int add_string(std::string& to_add, int letter_index);
 	void words(std::string tiles, std::string so_far, std::vector<std::string>& results);
-	std::tuple<std::string, int> highest_value_helper(std::string tiles, std::string so_far);
+	std::tuple<std::string, int> highest_value_helper(std::string tiles, std::string so_far, int highest_found);
 };
 
 const int tile_values[26] = {1,3,3,2,1,4,2,4,1,8,5,1,3,1,1,3,10,1,1,1,1,4,4,8,4,10}; // values of A through Z
@@ -44,10 +45,11 @@ Node tree;
 
 // note: single head node does not represent a letter/tile
 //       so the word 'a' will have 2 nodes
-void Node::add_string(std::string& to_add, int letter_index) {
+int Node::add_string(std::string& to_add, int letter_index) {
 	if (to_add.length() == letter_index) {
 		done = true;
-		return;
+		highest_this_branch = score_so_far;
+		return highest_this_branch;
 	}
 	else {
 		char c = to_add[letter_index];
@@ -57,7 +59,10 @@ void Node::add_string(std::string& to_add, int letter_index) {
 			int new_score = score_so_far + tile_values[next_node_index] * letter_index; // TODO: these names are kind of confusing
 			next[next_node_index] = new Node(new_score);
 		}
-		next[next_node_index]->add_string(to_add, letter_index);
+		int highest_in_new_branch = next[next_node_index]->add_string(to_add, letter_index);
+		if (highest_in_new_branch > highest_this_branch) {
+			highest_this_branch = highest_in_new_branch;
+		}
 	}
 }
 
@@ -122,10 +127,10 @@ std::tuple<std::string, int> highest_value(std::string tiles) {
 }
 
 std::tuple<std::string, int> highest_value_2(std::string tiles) {
-	return tree.highest_value_helper(tiles, "");
+	return tree.highest_value_helper(tiles, "", 0);
 }
 
-std::tuple<std::string, int> Node::highest_value_helper(std::string tiles, std::string so_far) {
+std::tuple<std::string, int> Node::highest_value_helper(std::string tiles, std::string so_far, int highest_found) {
 	int highest = 0;
 	std::string best;
 
@@ -142,6 +147,11 @@ std::tuple<std::string, int> Node::highest_value_helper(std::string tiles, std::
 			char c = tiles[i];
 			int index = char_to_index(c);
 			if (next[index] != nullptr) {
+				if (next[index]->highest_this_branch < highest) {
+					continue; // skip this branch, nothing good enough
+					// TODO: pass this down as well
+				}
+				
 				std::string tiles_copy;
 				tiles_copy.append(tiles, 0, i);
 				tiles_copy.append(tiles, i, tiles.length());
@@ -151,7 +161,7 @@ std::tuple<std::string, int> Node::highest_value_helper(std::string tiles, std::
 				
 				std::string s;
 				int score;
-				std::tie(s, score) = next[index]->highest_value_helper(tiles_copy, so_far_copy);
+				std::tie(s, score) = next[index]->highest_value_helper(tiles_copy, so_far_copy, highest);
 				if (score > highest) {
 					highest = score;
 					best = s;
@@ -173,9 +183,9 @@ void run_tests(void) {
 
     // test 'Node::add_string'
     Node t;
-    t.add_string(std::string("foo"), 0);
-    t.add_string(std::string("bar"), 0);
-    t.add_string(std::string("baz"), 0);
+    t.add_string(std::string("foo"), 0); // value: 9
+    t.add_string(std::string("bar"), 0); // value: 8
+    t.add_string(std::string("baz"), 0); // value: 35
 
     assert(t.next[0] == nullptr); // a
     assert(t.next[1] != nullptr); // b
@@ -196,6 +206,9 @@ void run_tests(void) {
 	assert(a->score_so_far == (3*1 + 1*2)); // ba
 	Node* r = a->next[17];
 	assert(r->score_so_far == (3*1 + 1*2 + 1*3)); // bar
+
+	assert(t.highest_this_branch == 35);
+	assert(f->highest_this_branch == 9);
 
     // test 'Node::words'
     std::vector<std::string> results;
